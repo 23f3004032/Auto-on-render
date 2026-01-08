@@ -23,7 +23,6 @@ export interface ProModeOptions {
   fontColor: string;
   fontType: string;
   boxColor: string;
-  layoutMode: 'two-column' | 'one-column';
 }
 
 // Font Options
@@ -46,22 +45,17 @@ export interface ColorOption {
 
 export const FONT_COLORS: ColorOption[] = [
   { name: 'Black', value: '000000', hex: '#000000' },
-  { name: 'Red', value: 'FF0000', hex: '#FF0000' },
-  { name: 'Blue', value: '0000FF', hex: '#0000FF' },
-  { name: 'Green', value: '008000', hex: '#008000' },
-  { name: 'Navy', value: '000080', hex: '#000080' },
-  { name: 'Purple', value: '800080', hex: '#800080' },
+  { name: 'White', value: 'FFFFFF', hex: '#FFFFFF' },
+  { name: 'Navy Blue', value: '000080', hex: '#000080' },
   { name: 'Dark Gray', value: '404040', hex: '#404040' },
+  { name: 'Dark Green', value: '006400', hex: '#006400' },
 ];
 
 export const BOX_COLORS: ColorOption[] = [
-  { name: 'No Color', value: 'FFFFFF', hex: '#FFFFFF' },
-  { name: 'Light Gray', value: 'F5F5F5', hex: '#F5F5F5' },
-  { name: 'Light Blue', value: 'E3F2FD', hex: '#E3F2FD' },
-  { name: 'Light Yellow', value: 'FFFDE7', hex: '#FFFDE7' },
-  { name: 'Light Green', value: 'E8F5E9', hex: '#E8F5E9' },
-  { name: 'Light Pink', value: 'FCE4EC', hex: '#FCE4EC' },
-  { name: 'White', value: 'FFFFFF', hex: '#FFFFFF' },
+  { name: 'Black', value: '000000', hex: '#000000' },
+  { name: 'Gray', value: '808080', hex: '#808080' },
+  { name: 'Navy', value: '000080', hex: '#000080' },
+  { name: 'Brown', value: '8B4513', hex: '#8B4513' },
 ];
 
 // Validation Constants
@@ -75,6 +69,5 @@ export const DEFAULT_PRO_OPTIONS: ProModeOptions = {
   fontSize: 11,
   fontColor: '000000',
   fontType: 'Arial',
-  boxColor: 'FFFFFF',
-  layoutMode: 'two-column',
+  boxColor: '000000',
 };

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Header from '@/components/Header';
 import ModeSelector from '@/components/ModeSelector';
 import NormalMode from '@/components/NormalMode';
+import ProMode from '@/components/ProMode';
+import BulkMode from '@/components/BulkMode';
 import { Mode } from '@/types';
 
 export default function Home() {
@@ -47,16 +49,8 @@ export default function Home() {
 
             {/* Mode Content */}
             {selectedMode === 'normal' && <NormalMode />}
-            {selectedMode === 'pro' && (
-              <div className="text-center py-12 text-gray-500">
-                <p className="text-lg">⚙️ Pro Mode Interface - Coming in Prompt 6</p>
-              </div>
-            )}
-            {selectedMode === 'bulk' && (
-              <div className="text-center py-12 text-gray-500">
-                <p className="text-lg">📦 Bulk Mode Interface - Coming in Prompt 9</p>
-              </div>
-            )}
+            {selectedMode === 'pro' && <ProMode />}
+            {selectedMode === 'bulk' && <BulkMode />}
           </div>
         )}
 
