@@ -5,6 +5,12 @@ export interface ImageData {
   preview: string;
   description?: string;
   rotated?: boolean;
+  processedBlob?: Blob;
+  originalOrientation?: 'portrait' | 'landscape';
+  dimensions?: {
+    width: number;
+    height: number;
+  };
 }
 
 // Mode Types
@@ -61,7 +67,6 @@ export const BOX_COLORS: ColorOption[] = [
 // Validation Constants
 export const MAX_IMAGE_COUNT = 200;
 export const MIN_IMAGE_COUNT = 1;
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp'];
 
 // Default Pro Mode Options

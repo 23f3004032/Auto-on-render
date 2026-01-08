@@ -1,15 +1,18 @@
 'use client'
 
 import { useState } from 'react';
-import { ImageData, MAX_IMAGE_COUNT, MIN_IMAGE_COUNT, MAX_FILE_SIZE, ALLOWED_IMAGE_TYPES } from '@/types';
+import { ImageData, MAX_IMAGE_COUNT, MIN_IMAGE_COUNT, ALLOWED_IMAGE_TYPES } from '@/types';
 import ImageUploadBox from './ImageUploadBox';
-import { FileText } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
+import { processImage, isValidImageType, getFileSizeDisplay } from '@/utils/imageProcessor';
+import { generateNormalModeDocx, generateFileName } from '@/utils/docxGenerator';
 
 export default function NormalMode() {
   const [imageCount, setImageCount] = useState<string>('');
   const [boxes, setBoxes] = useState<number>(0);
   const [images, setImages] = useState<(ImageData | null)[]>([]);
   const [error, setError] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
   const handleGenerateBoxes = () => {
     const count = parseInt(imageCount);
@@ -33,34 +36,58 @@ export default function NormalMode() {
     setImages(new Array(count).fill(null));
   };
 
-  const handleImageUpload = (index: number, file: File) => {
+  const handleImageUpload = async (index: number, file: File) => {
     // File type validation
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    if (!isValidImageType(file, ALLOWED_IMAGE_TYPES)) {
       setError('Invalid file type. Please upload JPG, PNG, or BMP images.');
-      return;
-    }
-
-    // File size validation
-    if (file.size > MAX_FILE_SIZE) {
-      setError('File size exceeds 10MB limit.');
       return;
     }
 
     setError('');
 
-    // Create preview URL
-    const preview = URL.createObjectURL(file);
-    
-    const newImageData: ImageData = {
-      id: `${Date.now()}-${index}`,
-      file,
-      preview,
-      description: '',
-    };
+    try {
+      // Show loading state
+      const loadingData: ImageData = {
+        id: `${Date.now()}-${index}`,
+        file,
+        preview: '',
+        description: '',
+      };
+      
+      const updatedImages = [...images];
+      updatedImages[index] = loadingData;
+      setImages(updatedImages);
 
-    const updatedImages = [...images];
-    updatedImages[index] = newImageData;
-    setImages(updatedImages);
+      // Process image: EXIF correction, portrait detection, auto-rotation
+      const processed = await processImage(file);
+      
+      const newImageData: ImageData = {
+        id: `${Date.now()}-${index}`,
+        file,
+        preview: processed.preview,
+        description: '',
+        rotated: processed.wasRotated,
+        processedBlob: processed.blob,
+        originalOrientation: processed.originalOrientation,
+        dimensions: {
+          width: processed.width,
+          height: processed.height,
+        },
+      };
+
+      updatedImages[index] = newImageData;
+      setImages(updatedImages);
+
+      // Show success message if image was rotated
+      if (processed.wasRotated) {
+        console.log(`✓ Image ${index + 1} rotated from portrait to landscape`);
+      }
+    } catch (err) {
+      setError(`Failed to process image: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      const updatedImages = [...images];
+      updatedImages[index] = null;
+      setImages(updatedImages);
+    }
   };
 
   const handleDescriptionChange = (index: number, description: string) => {
@@ -94,6 +121,46 @@ export default function NormalMode() {
     setImages([]);
     setImageCount('');
     setError('');
+  };
+
+  const handleDownloadDocx = async () => {
+    if (!allImagesUploaded) return;
+
+    setIsGenerating(true);
+    setError('');
+
+    try {
+      const validImages = images.filter((img) => img !== null) as ImageData[];
+      
+      console.log('=== DOCX Generation Started ===');
+      console.log(`Total images: ${validImages.length}`);
+      
+      // Verify all images have processedBlob
+      for (let i = 0; i < validImages.length; i++) {
+        const img = validImages[i];
+        console.log(`Image ${i + 1}:`, {
+          name: img.file.name,
+          hasProcessedBlob: !!img.processedBlob,
+          blobSize: img.processedBlob?.size || 0,
+          rotated: img.rotated,
+        });
+        
+        if (!img.processedBlob) {
+          throw new Error(`Image ${i + 1} (${img.file.name}) is missing processed blob!`);
+        }
+      }
+      
+      const fileName = generateFileName('Marine_Cargo_Report');
+      
+      await generateNormalModeDocx(validImages, fileName);
+      
+      console.log('✅ Document downloaded successfully');
+    } catch (err) {
+      setError(`Failed to generate document: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('❌ DOCX generation error:', err);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const allImagesUploaded = boxes > 0 && images.every((img) => img !== null);
@@ -178,11 +245,21 @@ export default function NormalMode() {
                 </button>
 
                 <button
-                  disabled={!allImagesUploaded}
+                  onClick={handleDownloadDocx}
+                  disabled={!allImagesUploaded || isGenerating}
                   className="px-6 py-2 bg-accent text-white rounded-lg font-semibold hover:bg-accent-dark transition-all disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 shadow-md"
                 >
-                  <FileText size={18} />
-                  Download DOCX
+                  {isGenerating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={18} />
+                      Download DOCX
+                    </>
+                  )}
                 </button>
               </div>
             </div>

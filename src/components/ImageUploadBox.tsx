@@ -1,6 +1,7 @@
-import { X, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, RotateCw } from 'lucide-react';
 import { ImageData } from '@/types';
 import { ChangeEvent, useRef } from 'react';
+import { getFileSizeDisplay } from '@/utils/imageProcessor';
 
 interface ImageUploadBoxProps {
   index: number;
@@ -51,12 +52,29 @@ export default function ImageUploadBox({
       {/* Image Preview Area */}
       <div className="mb-3">
         {imageData ? (
-          <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
+          <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden group">
             <img
               src={imageData.preview}
               alt={`Preview ${index + 1}`}
               className="w-full h-full object-contain"
             />
+            {/* Rotation indicator */}
+            {imageData.rotated && (
+              <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1 shadow-lg">
+                <RotateCw size={12} />
+                Auto-rotated
+              </div>
+            )}
+            {/* Image info overlay on hover */}
+            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+              <p>Size: {getFileSizeDisplay(imageData.file.size)}</p>
+              {imageData.dimensions && (
+                <p>Dimensions: {imageData.dimensions.width} × {imageData.dimensions.height}</p>
+              )}
+              {imageData.originalOrientation && (
+                <p>Original: {imageData.originalOrientation}</p>
+              )}
+            </div>
           </div>
         ) : (
           <div
@@ -65,7 +83,7 @@ export default function ImageUploadBox({
           >
             <ImageIcon size={48} className="text-gray-400 mb-2" />
             <p className="text-sm text-gray-500">Click to upload</p>
-            <p className="text-xs text-gray-400 mt-1">JPG, PNG, BMP (Max 10MB)</p>
+            <p className="text-xs text-gray-400 mt-1">JPG, PNG, BMP (No size limit)</p>
           </div>
         )}
       </div>
@@ -77,6 +95,7 @@ export default function ImageUploadBox({
         onChange={handleFileSelect}
         accept="image/jpeg,image/jpg,image/png,image/bmp"
         className="hidden"
+        aria-label={`Upload image ${index + 1}`}
       />
       
       <button
