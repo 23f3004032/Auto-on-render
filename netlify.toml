@@ -8,7 +8,7 @@
   publish = "out"
 
 [build.environment]
-  NODE_VERSION = "18.0.0"
+  NODE_VERSION = "20.11.0"
 
 [[headers]]
   for = "/*"
