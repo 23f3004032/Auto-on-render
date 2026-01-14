@@ -1,14 +1,17 @@
 'use client'
 
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import ModeSelector from '@/components/ModeSelector';
 import NormalMode from '@/components/NormalMode';
 import ProMode from '@/components/ProMode';
 import BulkMode from '@/components/BulkMode';
+import LoginScreen from '@/components/LoginScreen';
 import { Mode } from '@/types';
 
 export default function Home() {
+  const { isAuthenticated, isLoading } = useAuth();
   const [selectedMode, setSelectedMode] = useState<Mode>(null);
 
   const handleModeSelect = (mode: Mode) => {
@@ -19,6 +22,24 @@ export default function Home() {
     setSelectedMode(null);
   };
 
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-secondary-light flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
+
+  // Show main application if authenticated
   return (
     <main className="min-h-screen bg-secondary-light">
       {/* Header */}
