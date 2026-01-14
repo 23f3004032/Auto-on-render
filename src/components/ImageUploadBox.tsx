@@ -32,10 +32,10 @@ export default function ImageUploadBox({
   };
 
   return (
-    <div className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-primary transition-all duration-200 hover:shadow-md">
+    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-primary transition-all duration-200 hover:shadow-lg">
       {/* Box Number */}
       <div className="flex justify-between items-center mb-3">
-        <span className="text-sm font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">
+        <span className="text-sm font-semibold text-white bg-primary px-3 py-1 rounded-full">
           Image {index + 1}
         </span>
         {imageData && (
@@ -79,10 +79,10 @@ export default function ImageUploadBox({
         ) : (
           <div
             onClick={handleUploadClick}
-            className="w-full h-48 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
+            className="w-full h-48 bg-secondary-light border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
           >
             <ImageIcon size={48} className="text-gray-400 mb-2" />
-            <p className="text-sm text-gray-500">Click to upload</p>
+            <p className="text-sm text-gray-600 font-medium">Click to upload</p>
             <p className="text-xs text-gray-400 mt-1">JPG, PNG, BMP (No size limit)</p>
           </div>
         )}

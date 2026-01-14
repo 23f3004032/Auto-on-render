@@ -20,7 +20,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-secondary-light">
       {/* Header */}
       <Header />
 
@@ -31,10 +31,10 @@ export default function Home() {
 
         {/* Selected Mode Content */}
         {selectedMode && (
-          <div className="bg-white rounded-xl shadow-xl p-8">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
             {/* Reset Button */}
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-primary">
+              <h2 className="text-2xl font-bold text-gray-900">
                 {selectedMode === 'normal' && 'Normal Mode'}
                 {selectedMode === 'pro' && 'Pro Mode'}
                 {selectedMode === 'bulk' && 'Bulk Mode'}

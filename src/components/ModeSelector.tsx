@@ -28,8 +28,8 @@ export default function ModeSelector({ selectedMode, onModeSelect }: ModeSelecto
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-xl p-8 mb-8">
-      <h2 className="text-2xl font-bold text-primary text-center mb-6">
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-8">
+      <h2 className="text-2xl font-bold text-gray-900 text-center mb-6">
         Select Mode
       </h2>
       
@@ -40,11 +40,11 @@ export default function ModeSelector({ selectedMode, onModeSelect }: ModeSelecto
             onClick={() => onModeSelect(mode.id)}
             className={`
               relative p-6 rounded-lg border-2 transition-all duration-300 
-              hover:scale-105 hover:shadow-lg
+              hover:scale-105 hover:shadow-xl
               ${
                 selectedMode === mode.id
-                  ? 'border-primary bg-primary text-white shadow-lg scale-105'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-primary'
+                  ? 'border-primary bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl scale-105'
+                  : 'border-gray-200 bg-white text-gray-800 hover:border-primary hover:shadow-md'
               }
             `}
           >

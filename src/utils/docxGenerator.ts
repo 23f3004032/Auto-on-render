@@ -18,8 +18,8 @@ import { ImageData, ProModeOptions } from '@/types';
 
 const FIXED_IMAGE_WIDTH = 285;
 const FIXED_IMAGE_HEIGHT = 198;
-const PRO_IMAGE_WIDTH = 290;
-const PRO_IMAGE_HEIGHT = 198;
+const PRO_IMAGE_WIDTH = 310;
+const PRO_IMAGE_HEIGHT = 210;
 
 export async function generateNormalModeDocx(
   images: ImageData[],
@@ -174,8 +174,8 @@ function createTextCell(text: string): TableCell {
     margins: {
       top: 5,
       bottom: 5,
-      left: 0,
-      right: 0,
+      left: 20,
+      right: 20,
     },
   });
 }
@@ -221,7 +221,8 @@ export async function generateProModeDocx(
       const descRow = createProDescriptionRow(
         leftImage?.description || '',
         rightImage?.description || '',
-        options
+        options,
+        !!rightImage
       );
       tableRows.push(descRow);
     }
@@ -283,12 +284,18 @@ async function createProImageRow(
 function createProDescriptionRow(
   leftDesc: string,
   rightDesc: string,
-  options: ProModeOptions
+  options: ProModeOptions,
+  hasRightImage: boolean = true
 ): TableRow {
   const cells: TableCell[] = [
     createProTextCell(leftDesc, options),
-    createProTextCell(rightDesc, options)
   ];
+  
+  if (hasRightImage) {
+    cells.push(createProTextCell(rightDesc, options));
+  } else {
+    cells.push(createProEmptyCell(options));
+  }
   
   return new TableRow({ children: cells });
 }
@@ -330,8 +337,8 @@ async function createProImageCell(
           children: [image],
           alignment: AlignmentType.CENTER,
           spacing: {
-            before: 5,
-            after: 5,
+            before: options.addBorder ? 10 : 5,
+            after: options.addBorder ? 10 : 5,
           },
         }),
       ],
@@ -339,10 +346,10 @@ async function createProImageCell(
       verticalAlign: VerticalAlign.CENTER,
       borders: cellBorders,
       margins: {
-        top: 5,
-        bottom: 5,
-        left: 20,
-        right: 20,
+        top: options.addBorder ? 10 : 5,
+        bottom: options.addBorder ? 10 : 5,
+        left: options.addBorder ? 10 : 20,
+        right: options.addBorder ? 10 : 20,
       },
     });
     
@@ -353,6 +360,15 @@ async function createProImageCell(
 }
 
 function createProTextCell(text: string, options: ProModeOptions): TableCell {
+  const cellBorders = options.addBorder
+    ? {
+        top: { style: BorderStyle.SINGLE, size: 12, color: options.boxColor },
+        bottom: { style: BorderStyle.SINGLE, size: 12, color: options.boxColor },
+        left: { style: BorderStyle.SINGLE, size: 12, color: options.boxColor },
+        right: { style: BorderStyle.SINGLE, size: 12, color: options.boxColor },
+      }
+    : undefined;
+
   return new TableCell({
     children: [
       new Paragraph({
@@ -372,11 +388,12 @@ function createProTextCell(text: string, options: ProModeOptions): TableCell {
       }),
     ],
     width: { size: 50, type: WidthType.PERCENTAGE },
+    borders: cellBorders,
     margins: {
       top: 5,
       bottom: 5,
-      left: 0,
-      right: 0,
+      left: 20,
+      right: 20,
     },
   });
 }
