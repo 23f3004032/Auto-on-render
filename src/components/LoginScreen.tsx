@@ -16,7 +16,7 @@ export default function LoginScreen() {
   const [showPasscode, setShowPasscode] = useState(false);
   const [showMasterCode, setShowMasterCode] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -30,14 +30,14 @@ export default function LoginScreen() {
       return;
     }
 
-    const success = login(passcode);
+    const success = await login(passcode);
     if (!success) {
       setError('Invalid passcode. Please try again.');
       setPasscode('');
     }
   };
 
-  const handleResetPasscode = (e: React.FormEvent) => {
+  const handleResetPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -62,16 +62,16 @@ export default function LoginScreen() {
       return;
     }
 
-    const resetSuccess = resetPasscode(masterCode, newPasscode);
+    const resetSuccess = await resetPasscode(masterCode, newPasscode);
     if (resetSuccess) {
-      setSuccess('Passcode reset successfully! You can now login with your new passcode.');
+      setSuccess('Passcode reset successfully globally! All devices will use the new passcode.');
       setMasterCode('');
       setNewPasscode('');
       setConfirmPasscode('');
       setTimeout(() => {
         setShowForgotPassword(false);
         setSuccess('');
-      }, 2000);
+      }, 3000);
     } else {
       setError('Invalid master code. Please contact administrator.');
       setMasterCode('');

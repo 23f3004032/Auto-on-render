@@ -1,84 +1,89 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 // Constants
 const DEFAULT_PASSCODE = '123456';
 const MASTER_RESET_CODE = 'BABURAOMARINE1904';
-const STORAGE_KEY = 'auth_passcode';
 const SESSION_KEY = 'auth_session';
+const AUTH_DOC_ID = 'credentials';
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (passcode: string) => boolean;
+  login: (passcode: string) => Promise<boolean>;
   logout: () => void;
-  resetPasscode: (masterCode: string, newPasscode: string) => boolean;
+  resetPasscode: (masterCode: string, newPasscode: string) => Promise<boolean>;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Simple encoding to obscure passcode in localStorage (not cryptographically secure)
-const encodePasscode = (passcode: string): string => {
-  return btoa(passcode);
-};
-
-const decodePasscode = (encoded: string): string => {
-  try {
-    return atob(encoded);
-  } catch {
-    return '';
-  }
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize: Check if user has a valid session
+  // Initialize: Check session and ensure default password exists in Firestore
   useEffect(() => {
-    const checkSession = () => {
-      if (typeof window !== 'undefined') {
-        const session = sessionStorage.getItem(SESSION_KEY);
-        if (session === 'active') {
-          setIsAuthenticated(true);
+    const initializeAuth = async () => {
+      try {
+        // Check for active session
+        if (typeof window !== 'undefined') {
+          const session = sessionStorage.getItem(SESSION_KEY);
+          if (session === 'active') {
+            setIsAuthenticated(true);
+          }
         }
+
+        // Initialize default passcode in Firestore if not exists
+        const authDocRef = doc(db, 'auth', AUTH_DOC_ID);
+        const authDoc = await getDoc(authDocRef);
         
-        // Initialize default passcode if not set
-        const storedPasscode = localStorage.getItem(STORAGE_KEY);
-        if (!storedPasscode) {
-          localStorage.setItem(STORAGE_KEY, encodePasscode(DEFAULT_PASSCODE));
+        if (!authDoc.exists()) {
+          // Create default credentials
+          await setDoc(authDocRef, {
+            passcode: DEFAULT_PASSCODE,
+            masterCode: MASTER_RESET_CODE,
+            lastUpdated: new Date().toISOString(),
+          });
+          console.log('✓ Default credentials initialized in Firestore');
         }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
-    checkSession();
+    initializeAuth();
   }, []);
 
-  const login = (passcode: string): boolean => {
-    if (typeof window === 'undefined') return false;
+  const login = async (passcode: string): Promise<boolean> => {
+    try {
+      const authDocRef = doc(db, 'auth', AUTH_DOC_ID);
+      const authDoc = await getDoc(authDocRef);
+      
+      if (!authDoc.exists()) {
+        console.error('Auth document not found');
+        return false;
+      }
 
-    const storedPasscode = localStorage.getItem(STORAGE_KEY);
-    if (!storedPasscode) {
-      // If no passcode exists, set default and check against it
-      localStorage.setItem(STORAGE_KEY, encodePasscode(DEFAULT_PASSCODE));
-      if (passcode === DEFAULT_PASSCODE) {
-        sessionStorage.setItem(SESSION_KEY, 'active');
+      const storedPasscode = authDoc.data().passcode;
+      
+      if (passcode === storedPasscode) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(SESSION_KEY, 'active');
+        }
         setIsAuthenticated(true);
         return true;
       }
+
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
       return false;
     }
-
-    const actualPasscode = decodePasscode(storedPasscode);
-    if (passcode === actualPasscode) {
-      sessionStorage.setItem(SESSION_KEY, 'active');
-      setIsAuthenticated(true);
-      return true;
-    }
-
-    return false;
   };
 
   const logout = () => {
@@ -88,22 +93,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(false);
   };
 
-  const resetPasscode = (masterCode: string, newPasscode: string): boolean => {
-    if (typeof window === 'undefined') return false;
+  const resetPasscode = async (masterCode: string, newPasscode: string): Promise<boolean> => {
+    try {
+      // Verify master reset code
+      const authDocRef = doc(db, 'auth', AUTH_DOC_ID);
+      const authDoc = await getDoc(authDocRef);
+      
+      if (!authDoc.exists()) {
+        console.error('Auth document not found');
+        return false;
+      }
 
-    // Verify master reset code
-    if (masterCode !== MASTER_RESET_CODE) {
+      const storedMasterCode = authDoc.data().masterCode;
+      
+      if (masterCode !== storedMasterCode) {
+        return false;
+      }
+
+      // Validate new passcode (must be exactly 6 digits)
+      if (!newPasscode || newPasscode.length !== 6 || !/^\d+$/.test(newPasscode)) {
+        return false;
+      }
+
+      // Update passcode in Firestore (globally for all devices)
+      await setDoc(authDocRef, {
+        passcode: newPasscode,
+        masterCode: storedMasterCode,
+        lastUpdated: new Date().toISOString(),
+      });
+
+      console.log('✓ Password updated globally in Firestore');
+      return true;
+    } catch (error) {
+      console.error('Reset passcode error:', error);
       return false;
     }
-
-    // Validate new passcode (must be exactly 6 digits)
-    if (!newPasscode || newPasscode.length !== 6 || !/^\d+$/.test(newPasscode)) {
-      return false;
-    }
-
-    // Set new passcode
-    localStorage.setItem(STORAGE_KEY, encodePasscode(newPasscode));
-    return true;
   };
 
   const value: AuthContextType = {
