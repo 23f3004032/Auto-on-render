@@ -62,7 +62,7 @@ export const BOX_COLORS: ColorOption[] = [
 ];
 
 // Validation Constants
-export const MAX_IMAGE_COUNT = 200;
+export const MAX_IMAGE_COUNT = 500;
 export const MIN_IMAGE_COUNT = 1;
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp'];
 
