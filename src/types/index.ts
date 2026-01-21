@@ -21,6 +21,7 @@ export type Mode = 'normal' | 'pro' | 'bulk' | null;
 export interface ProModeOptions {
   addBorder: boolean;
   showDescription: boolean;
+  autoNumberDescription: boolean;
   fontSize: number;
   fontColor: string;
   fontType: string;
@@ -69,6 +70,7 @@ export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'ima
 export const DEFAULT_PRO_OPTIONS: ProModeOptions = {
   addBorder: false,
   showDescription: true,
+  autoNumberDescription: false,
   fontSize: 11,
   fontColor: '000000',
   fontType: 'Arial',

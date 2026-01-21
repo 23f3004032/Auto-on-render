@@ -22,15 +22,22 @@ export default function ProMode() {
 
     setIsProcessing(true);
 
-    const newImagesPromises = acceptedFiles.map(async (file) => {
+    const startingIndex = images.length;
+
+    const newImagesPromises = acceptedFiles.map(async (file, index) => {
       try {
         const processed = await processImage(file);
+        
+        // Auto-generate description if auto-numbering is enabled
+        const autoDescription = proOptions.autoNumberDescription 
+          ? `Survey Photo No. ${startingIndex + index + 1}`
+          : '';
         
         return {
           id: `${Date.now()}-${Math.random()}`,
           file,
           preview: processed.preview,
-          description: '',
+          description: autoDescription,
           rotated: processed.wasRotated,
           processedBlob: processed.blob,
           originalOrientation: processed.originalOrientation,
@@ -92,6 +99,19 @@ export default function ProMode() {
     if (newImages[index]) {
       newImages[index].description = description;
       setImages(newImages);
+    }
+  };
+
+  const handleAutoNumberToggle = (enabled: boolean) => {
+    setProOptions({ ...proOptions, autoNumberDescription: enabled });
+    
+    // If enabling auto-numbering, update all existing images
+    if (enabled) {
+      const updatedImages = images.map((img, index) => ({
+        ...img,
+        description: `Survey Photo No. ${index + 1}`,
+      }));
+      setImages(updatedImages);
     }
   };
 
@@ -230,23 +250,48 @@ export default function ProMode() {
             </div>
 
             {proOptions.addBorder && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Show Description
-                </label>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={proOptions.showDescription}
-                    onChange={(e) => setProOptions({ ...proOptions, showDescription: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  <span className="ms-3 text-sm font-medium text-gray-700">
-                    {proOptions.showDescription ? 'On' : 'Off'}
-                  </span>
-                </label>
-              </div>
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Show Description
+                  </label>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={proOptions.showDescription}
+                      onChange={(e) => setProOptions({ ...proOptions, showDescription: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <span className="ms-3 text-sm font-medium text-gray-700">
+                      {proOptions.showDescription ? 'On' : 'Off'}
+                    </span>
+                  </label>
+                </div>
+
+                {proOptions.showDescription && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Auto-Number Descriptions
+                    </label>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={proOptions.autoNumberDescription}
+                        onChange={(e) => handleAutoNumberToggle(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <span className="ms-3 text-sm font-medium text-gray-700">
+                        {proOptions.autoNumberDescription ? 'On' : 'Off'}
+                      </span>
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Auto-generate "Survey Photo No. 1, 2, 3..."
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             <div>
