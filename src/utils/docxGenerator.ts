@@ -211,20 +211,32 @@ export async function generateProModeDocx(
     
     const tableRows: TableRow[] = [];
     
-    for (let i = 0; i < images.length; i += 2) {
-      const leftImage = images[i];
-      const rightImage = images[i + 1];
-      
-      const imageRow = await createProImageRow(leftImage, rightImage, options);
-      tableRows.push(imageRow);
-      
-      const descRow = createProDescriptionRow(
-        leftImage?.description || '',
-        rightImage?.description || '',
-        options,
-        !!rightImage
-      );
-      tableRows.push(descRow);
+    if (options.addBorder && !options.showDescription) {
+      // 2-column grid layout without descriptions
+      for (let i = 0; i < images.length; i += 2) {
+        const leftImage = images[i];
+        const rightImage = images[i + 1];
+        
+        const imageRow = await createProImageRow(leftImage, rightImage, options);
+        tableRows.push(imageRow);
+      }
+    } else {
+      // Original layout with descriptions
+      for (let i = 0; i < images.length; i += 2) {
+        const leftImage = images[i];
+        const rightImage = images[i + 1];
+        
+        const imageRow = await createProImageRow(leftImage, rightImage, options);
+        tableRows.push(imageRow);
+        
+        const descRow = createProDescriptionRow(
+          leftImage?.description || '',
+          rightImage?.description || '',
+          options,
+          !!rightImage
+        );
+        tableRows.push(descRow);
+      }
     }
     
     console.log(`✓ Created ${tableRows.length} table rows`);

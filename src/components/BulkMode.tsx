@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { ImageData, ALLOWED_IMAGE_TYPES, MAX_IMAGE_COUNT } from '@/types';
-import { processImage } from '@/utils/imageProcessor';
+import { processImage, rotateImage } from '@/utils/imageProcessor';
 import { generateNormalModeDocx, generateFileName } from '@/utils/docxGenerator';
-import { Upload, X, Download, Image as ImageIcon, GripVertical } from 'lucide-react';
+import { Upload, X, Download, Image as ImageIcon, GripVertical, RotateCcw, RotateCw } from 'lucide-react';
 
 export default function BulkMode() {
   const [images, setImages] = useState<ImageData[]>([]);
@@ -74,6 +74,37 @@ export default function BulkMode() {
     const newImages = [...images];
     newImages[index] = { ...newImages[index], description };
     setImages(newImages);
+  };
+
+  const handleRotate = async (index: number) => {
+    const imageData = images[index];
+    if (!imageData || !imageData.processedBlob) return;
+
+    try {
+      const currentRotation = imageData.rotationAngle || 0;
+      const rotated = await rotateImage(imageData.processedBlob, currentRotation);
+
+      // Revoke old preview URL
+      if (imageData.preview) {
+        URL.revokeObjectURL(imageData.preview);
+      }
+
+      const newImages = [...images];
+      newImages[index] = {
+        ...imageData,
+        preview: rotated.preview,
+        processedBlob: rotated.blob,
+        dimensions: {
+          width: rotated.width,
+          height: rotated.height,
+        },
+        rotationAngle: rotated.rotation,
+      };
+      setImages(newImages);
+    } catch (error) {
+      console.error('Error rotating image:', error);
+      alert('Failed to rotate image. Please try again.');
+    }
   };
 
   const handleDragStart = (index: number) => {
@@ -251,7 +282,22 @@ export default function BulkMode() {
                   #{index + 1}
                 </div>
 
-                <div className="absolute top-2 right-2 z-10">
+                <div className="absolute top-2 right-2 flex items-center gap-2 z-10">
+                  {image.rotated && (
+                    <>
+                      <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                        <RotateCw size={12} />
+                        Auto-rotated
+                      </div>
+                      <button
+                        onClick={() => handleRotate(index)}
+                        className="bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-full transition-colors shadow-lg"
+                        title="Rotate 90° anti-clockwise"
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => handleRemoveImage(index)}
                     className="bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-colors shadow-lg"
@@ -277,11 +323,6 @@ export default function BulkMode() {
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-100">
                       <ImageIcon className="w-12 h-12 text-gray-400" />
-                    </div>
-                  )}
-                  {image.rotated && (
-                    <div className="absolute bottom-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                      Rotated
                     </div>
                   )}
                 </div>

@@ -212,3 +212,63 @@ export function fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
     reader.readAsArrayBuffer(file);
   });
 }
+
+/**
+ * Rotate an image by 90 degrees anti-clockwise
+ */
+export async function rotateImage(blob: Blob, currentRotation: number = 0): Promise<{ blob: Blob; preview: string; width: number; height: number; rotation: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+
+      // Swap width and height for 90-degree rotation
+      canvas.width = img.height;
+      canvas.height = img.width;
+
+      // Rotate anti-clockwise (counter-clockwise) by 90 degrees
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((-90 * Math.PI) / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      canvas.toBlob(
+        (rotatedBlob) => {
+          if (!rotatedBlob) {
+            reject(new Error('Failed to create rotated blob'));
+            return;
+          }
+
+          const preview = URL.createObjectURL(rotatedBlob);
+          const newRotation = (currentRotation + 90) % 360;
+
+          resolve({
+            blob: rotatedBlob,
+            preview,
+            width: canvas.width,
+            height: canvas.height,
+            rotation: newRotation,
+          });
+        },
+        'image/jpeg',
+        0.92
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image for rotation'));
+    };
+
+    img.src = url;
+  });
+}

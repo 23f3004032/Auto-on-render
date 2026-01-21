@@ -11,6 +11,7 @@ export interface ImageData {
     width: number;
     height: number;
   };
+  rotationAngle?: number;
 }
 
 // Mode Types
@@ -19,6 +20,7 @@ export type Mode = 'normal' | 'pro' | 'bulk' | null;
 // Pro Mode Options
 export interface ProModeOptions {
   addBorder: boolean;
+  showDescription: boolean;
   fontSize: number;
   fontColor: string;
   fontType: string;
@@ -66,6 +68,7 @@ export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'ima
 // Default Pro Mode Options
 export const DEFAULT_PRO_OPTIONS: ProModeOptions = {
   addBorder: false,
+  showDescription: true,
   fontSize: 11,
   fontColor: '000000',
   fontType: 'Arial',

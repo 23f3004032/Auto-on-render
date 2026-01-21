@@ -1,4 +1,4 @@
-import { X, Upload, Image as ImageIcon, RotateCw } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, RotateCw, RotateCcw } from 'lucide-react';
 import { ImageData } from '@/types';
 import { ChangeEvent, useRef } from 'react';
 import { getFileSizeDisplay } from '@/utils/imageProcessor';
@@ -9,6 +9,8 @@ interface ImageUploadBoxProps {
   onImageUpload: (index: number, file: File) => void;
   onDescriptionChange: (index: number, description: string) => void;
   onClear: (index: number) => void;
+  onRotate?: (index: number) => void;
+  hideDescription?: boolean;
 }
 
 export default function ImageUploadBox({
@@ -17,6 +19,8 @@ export default function ImageUploadBox({
   onImageUpload,
   onDescriptionChange,
   onClear,
+  onRotate,
+  hideDescription = false,
 }: ImageUploadBoxProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,11 +62,22 @@ export default function ImageUploadBox({
               alt={`Preview ${index + 1}`}
               className="w-full h-full object-contain"
             />
-            {/* Rotation indicator */}
+            {/* Rotation indicator and button */}
             {imageData.rotated && (
-              <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1 shadow-lg">
-                <RotateCw size={12} />
-                Auto-rotated
+              <div className="absolute top-2 right-2 flex items-center gap-2">
+                <div className="bg-green-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1 shadow-lg">
+                  <RotateCw size={12} />
+                  Auto-rotated
+                </div>
+                {onRotate && (
+                  <button
+                    onClick={() => onRotate(index)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded shadow-lg transition-colors"
+                    title="Rotate 90° anti-clockwise"
+                  >
+                    <RotateCcw size={14} />
+                  </button>
+                )}
               </div>
             )}
             {/* Image info overlay on hover */}
@@ -100,7 +115,7 @@ export default function ImageUploadBox({
       
       <button
         onClick={handleUploadClick}
-        className={`w-full py-2 px-4 rounded-lg font-medium transition-all mb-3 flex items-center justify-center gap-2 ${
+        className={`w-full py-2 px-4 rounded-lg font-medium transition-all ${hideDescription ? '' : 'mb-3'} flex items-center justify-center gap-2 ${
           imageData
             ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             : 'bg-primary text-white hover:bg-primary-dark'
@@ -110,20 +125,24 @@ export default function ImageUploadBox({
         {imageData ? 'Change Image' : 'Upload Image'}
       </button>
 
-      {/* Description Textarea */}
-      <textarea
-        placeholder="Description (optional)"
-        value={imageData?.description || ''}
-        onChange={(e) => onDescriptionChange(index, e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm"
-        rows={3}
-      />
+      {/* Description Textarea - Hidden when hideDescription is true */}
+      {!hideDescription && (
+        <>
+          <textarea
+            placeholder="Description (optional)"
+            value={imageData?.description || ''}
+            onChange={(e) => onDescriptionChange(index, e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm"
+            rows={3}
+          />
 
-      {/* Character count */}
-      {imageData?.description && (
-        <p className="text-xs text-gray-400 mt-1 text-right">
-          {imageData.description.length} characters
-        </p>
+          {/* Character count */}
+          {imageData?.description && (
+            <p className="text-xs text-gray-400 mt-1 text-right">
+              {imageData.description.length} characters
+            </p>
+          )}
+        </>
       )}
     </div>
   );

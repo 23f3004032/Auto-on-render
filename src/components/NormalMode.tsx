@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ImageData, MAX_IMAGE_COUNT, MIN_IMAGE_COUNT, ALLOWED_IMAGE_TYPES } from '@/types';
 import ImageUploadBox from './ImageUploadBox';
 import { FileText, Download } from 'lucide-react';
-import { processImage, isValidImageType, getFileSizeDisplay } from '@/utils/imageProcessor';
+import { processImage, isValidImageType, getFileSizeDisplay, rotateImage } from '@/utils/imageProcessor';
 import { generateNormalModeDocx, generateFileName } from '@/utils/docxGenerator';
 
 export default function NormalMode() {
@@ -108,6 +108,36 @@ export default function NormalMode() {
     }
     updatedImages[index] = null;
     setImages(updatedImages);
+  };
+
+  const handleRotate = async (index: number) => {
+    const imageData = images[index];
+    if (!imageData || !imageData.processedBlob) return;
+
+    try {
+      const currentRotation = imageData.rotationAngle || 0;
+      const rotated = await rotateImage(imageData.processedBlob, currentRotation);
+
+      // Revoke old preview URL
+      if (imageData.preview) {
+        URL.revokeObjectURL(imageData.preview);
+      }
+
+      const updatedImages = [...images];
+      updatedImages[index] = {
+        ...imageData,
+        preview: rotated.preview,
+        processedBlob: rotated.blob,
+        dimensions: {
+          width: rotated.width,
+          height: rotated.height,
+        },
+        rotationAngle: rotated.rotation,
+      };
+      setImages(updatedImages);
+    } catch (err) {
+      setError(`Failed to rotate image: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
 
   const handleReset = () => {
@@ -282,6 +312,7 @@ export default function NormalMode() {
                 onImageUpload={handleImageUpload}
                 onDescriptionChange={handleDescriptionChange}
                 onClear={handleClear}
+                onRotate={handleRotate}
               />
             ))}
           </div>
