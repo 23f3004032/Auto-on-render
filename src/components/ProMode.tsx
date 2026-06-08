@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { ImageData, ProModeOptions, DEFAULT_PRO_OPTIONS, FONT_TYPES, FONT_SIZES, FONT_COLORS, BOX_COLORS, MAX_IMAGE_COUNT } from '@/types';
+import { ImageData, ProModeOptions, DEFAULT_PRO_OPTIONS, FONT_TYPES, FONT_SIZES, FONT_COLORS, BOX_COLORS, MAX_IMAGE_COUNT, AUTO_NUMBER_KEYWORDS } from '@/types';
 import ImageUploadBox from './ImageUploadBox';
 import { processImage, rotateImage } from '@/utils/imageProcessor';
 import { generateProModeDocx, generateFileName } from '@/utils/docxGenerator';
@@ -30,7 +30,7 @@ export default function ProMode() {
         
         // Auto-generate description if auto-numbering is enabled
         const autoDescription = proOptions.autoNumberDescription 
-          ? `Survey Photo No. ${startingIndex + index + 1}`
+          ? `${proOptions.autoNumberKeyword} ${startingIndex + index + 1}`
           : '';
         
         return {
@@ -109,7 +109,20 @@ export default function ProMode() {
     if (enabled) {
       const updatedImages = images.map((img, index) => ({
         ...img,
-        description: `Survey Photo No. ${index + 1}`,
+        description: `${proOptions.autoNumberKeyword} ${index + 1}`,
+      }));
+      setImages(updatedImages);
+    }
+  };
+
+  const handleKeywordChange = (keyword: string) => {
+    setProOptions({ ...proOptions, autoNumberKeyword: keyword });
+
+    // Re-number all existing images with the new keyword
+    if (proOptions.autoNumberDescription) {
+      const updatedImages = images.map((img, index) => ({
+        ...img,
+        description: `${keyword} ${index + 1}`,
       }));
       setImages(updatedImages);
     }
@@ -270,26 +283,58 @@ export default function ProMode() {
                 </div>
 
                 {proOptions.showDescription && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Auto-Number Descriptions
-                    </label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={proOptions.autoNumberDescription}
-                        onChange={(e) => handleAutoNumberToggle(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      <span className="ms-3 text-sm font-medium text-gray-700">
-                        {proOptions.autoNumberDescription ? 'On' : 'Off'}
-                      </span>
-                    </label>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Auto-generate "Survey Photo No. 1, 2, 3..."
-                    </p>
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Auto-Number Descriptions
+                      </label>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={proOptions.autoNumberDescription}
+                          onChange={(e) => handleAutoNumberToggle(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <span className="ms-3 text-sm font-medium text-gray-700">
+                          {proOptions.autoNumberDescription ? 'On' : 'Off'}
+                        </span>
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Auto-generate "{proOptions.autoNumberKeyword} 1, 2, 3..."
+                      </p>
+                    </div>
+
+                    {proOptions.autoNumberDescription && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Photo Number Keyword
+                        </label>
+                        <div className="flex flex-col gap-2">
+                          {AUTO_NUMBER_KEYWORDS.map((keyword) => (
+                            <label
+                              key={keyword}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                                proOptions.autoNumberKeyword === keyword
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50/50'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="autoNumberKeyword"
+                                value={keyword}
+                                checked={proOptions.autoNumberKeyword === keyword}
+                                onChange={() => handleKeywordChange(keyword)}
+                                className="accent-blue-600"
+                              />
+                              <span className="text-xs font-medium">{keyword}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}

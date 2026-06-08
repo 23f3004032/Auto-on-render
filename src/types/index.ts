@@ -22,11 +22,17 @@ export interface ProModeOptions {
   addBorder: boolean;
   showDescription: boolean;
   autoNumberDescription: boolean;
+  autoNumberKeyword: string;
   fontSize: number;
   fontColor: string;
   fontType: string;
   boxColor: string;
 }
+
+export const AUTO_NUMBER_KEYWORDS = [
+  'Survey Photo No.',
+  'QC Inspection Photo No.',
+] as const;
 
 // Font Options
 export const FONT_TYPES = [
@@ -71,6 +77,7 @@ export const DEFAULT_PRO_OPTIONS: ProModeOptions = {
   addBorder: false,
   showDescription: true,
   autoNumberDescription: false,
+  autoNumberKeyword: 'Survey Photo No.',
   fontSize: 11,
   fontColor: '000000',
   fontType: 'Arial',
