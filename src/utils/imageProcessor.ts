@@ -9,7 +9,18 @@ export interface ProcessedImageResult {
   originalOrientation: 'portrait' | 'landscape';
 }
 
-export async function processImage(file: File): Promise<ProcessedImageResult> {
+/**
+ * Decode, EXIF-correct, optionally rotate portrait→landscape, then compress.
+ *
+ * @param file           The raw File from the user
+ * @param maxDimension   Max px for both width & height (default 1100 — "balanced")
+ * @param quality        JPEG quality 0–1 (default 0.72 — "balanced")
+ */
+export async function processImage(
+  file: File,
+  maxDimension: number = 1100,
+  quality: number = 0.72
+): Promise<ProcessedImageResult> {
   return new Promise((resolve, reject) => {
     loadImage(
       file,
@@ -33,6 +44,7 @@ export async function processImage(file: File): Promise<ProcessedImageResult> {
         let wasRotated = false;
 
         if (height > width) {
+          // Portrait → rotate to landscape
           const rotatedCanvas = document.createElement('canvas');
           rotatedCanvas.width = height;
           rotatedCanvas.height = width;
@@ -54,7 +66,7 @@ export async function processImage(file: File): Promise<ProcessedImageResult> {
                 return;
               }
 
-              console.log(`✓ Created rotated blob: ${blob.size} bytes, type: ${blob.type}`);
+              console.log(`✓ Rotated blob: ${blob.size} bytes (${rotatedCanvas.width}×${rotatedCanvas.height}px, q=${quality})`);
               
               const preview = URL.createObjectURL(blob);
               resolve({
@@ -67,7 +79,7 @@ export async function processImage(file: File): Promise<ProcessedImageResult> {
               });
             },
             'image/jpeg',
-            0.92
+            quality
           );
 
           wasRotated = true;
@@ -79,7 +91,7 @@ export async function processImage(file: File): Promise<ProcessedImageResult> {
                 return;
               }
 
-              console.log(`✓ Created landscape blob: ${blob.size} bytes, type: ${blob.type}`);
+              console.log(`✓ Landscape blob: ${blob.size} bytes (${canvas.width}×${canvas.height}px, q=${quality})`);
 
               const preview = URL.createObjectURL(blob);
               resolve({
@@ -92,13 +104,13 @@ export async function processImage(file: File): Promise<ProcessedImageResult> {
               });
             },
             'image/jpeg',
-            0.92
+            quality
           );
         }
       },
       {
-        maxWidth: 3000,
-        maxHeight: 3000,
+        maxWidth: maxDimension,
+        maxHeight: maxDimension,
         canvas: true,
         orientation: true,
       }
@@ -214,9 +226,17 @@ export function fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
 }
 
 /**
- * Rotate an image by 90 degrees anti-clockwise
+ * Rotate an image 90° anti-clockwise, re-encoding at the given quality.
+ *
+ * @param blob            Source image blob
+ * @param currentRotation Accumulated rotation so far (for tracking)
+ * @param quality         JPEG quality 0–1 (default 0.72 — "balanced")
  */
-export async function rotateImage(blob: Blob, currentRotation: number = 0): Promise<{ blob: Blob; preview: string; width: number; height: number; rotation: number }> {
+export async function rotateImage(
+  blob: Blob,
+  currentRotation: number = 0,
+  quality: number = 0.72
+): Promise<{ blob: Blob; preview: string; width: number; height: number; rotation: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(blob);
@@ -260,7 +280,7 @@ export async function rotateImage(blob: Blob, currentRotation: number = 0): Prom
           });
         },
         'image/jpeg',
-        0.92
+        quality
       );
     };
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react';
-import { ImageData, MAX_IMAGE_COUNT, MIN_IMAGE_COUNT, ALLOWED_IMAGE_TYPES } from '@/types';
+import { ImageData, MAX_IMAGE_COUNT, MIN_IMAGE_COUNT, ALLOWED_IMAGE_TYPES, estimatedDocxSize } from '@/types';
 import ImageUploadBox from './ImageUploadBox';
 import { FileText, Download } from 'lucide-react';
 import { processImage, isValidImageType, getFileSizeDisplay, rotateImage } from '@/utils/imageProcessor';
@@ -255,6 +255,12 @@ export default function NormalMode() {
                 </h3>
                 <p className="text-sm text-gray-600">
                   {uploadedCount} of {boxes} images uploaded
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Estimated DOCX size:{' '}
+                  <span className="font-semibold text-gray-600">
+                    {estimatedDocxSize(uploadedCount, 'balanced')}
+                  </span>
                 </p>
               </div>
 

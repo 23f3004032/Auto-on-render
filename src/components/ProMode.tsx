@@ -1,18 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { ImageData, ProModeOptions, DEFAULT_PRO_OPTIONS, FONT_TYPES, FONT_SIZES, FONT_COLORS, BOX_COLORS, MAX_IMAGE_COUNT, AUTO_NUMBER_KEYWORDS } from '@/types';
+import {
+  ImageData,
+  ProModeOptions,
+  DEFAULT_PRO_OPTIONS,
+  FONT_TYPES,
+  FONT_SIZES,
+  FONT_COLORS,
+  BOX_COLORS,
+  MAX_IMAGE_COUNT,
+  AUTO_NUMBER_KEYWORDS,
+  COMPRESSION_PRESETS,
+  CompressionPreset,
+  estimatedDocxSize,
+  ALLOWED_IMAGE_TYPES,
+} from '@/types';
 import ImageUploadBox from './ImageUploadBox';
 import { processImage, rotateImage } from '@/utils/imageProcessor';
 import { generateProModeDocx, generateFileName } from '@/utils/docxGenerator';
-import { Download, Settings, Upload } from 'lucide-react';
+import { Download, Settings, Upload, Folder } from 'lucide-react';
 
 export default function ProMode() {
   const [images, setImages] = useState<ImageData[]>([]);
   const [proOptions, setProOptions] = useState<ProModeOptions>(DEFAULT_PRO_OPTIONS);
   const [showConfig, setShowConfig] = useState<boolean>(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Derived helpers ──────────────────────────────────────────────────────
+  // The keyword actually used in descriptions (preset or custom)
+  const effectiveKeyword = proOptions.isCustomKeyword
+    ? (proOptions.customKeyword || 'Photo')
+    : proOptions.autoNumberKeyword;
+  // The number descriptions count from
+  const startNum = proOptions.useCustomNumberStart ? (proOptions.numberStartFrom || 1) : 1;
 
   const onDrop = async (acceptedFiles: File[]) => {
     if (images.length + acceptedFiles.length > MAX_IMAGE_COUNT) {
@@ -24,13 +47,15 @@ export default function ProMode() {
 
     const startingIndex = images.length;
 
+    const { maxDimension, quality } = COMPRESSION_PRESETS[proOptions.compressionPreset];
+
     const newImagesPromises = acceptedFiles.map(async (file, index) => {
       try {
-        const processed = await processImage(file);
+        const processed = await processImage(file, maxDimension, quality);
         
         // Auto-generate description if auto-numbering is enabled
         const autoDescription = proOptions.autoNumberDescription 
-          ? `${proOptions.autoNumberKeyword} ${startingIndex + index + 1}`
+          ? `${effectiveKeyword} ${startingIndex + index + startNum}`
           : '';
         
         return {
@@ -71,7 +96,8 @@ export default function ProMode() {
 
   const handleImageUpload = async (index: number, file: File) => {
     try {
-      const processed = await processImage(file);
+      const { maxDimension, quality } = COMPRESSION_PRESETS[proOptions.compressionPreset];
+      const processed = await processImage(file, maxDimension, quality);
       
       const newImages = [...images];
       newImages[index] = {
@@ -109,20 +135,60 @@ export default function ProMode() {
     if (enabled) {
       const updatedImages = images.map((img, index) => ({
         ...img,
-        description: `${proOptions.autoNumberKeyword} ${index + 1}`,
+        description: `${effectiveKeyword} ${index + startNum}`,
       }));
       setImages(updatedImages);
     }
   };
 
   const handleKeywordChange = (keyword: string) => {
-    setProOptions({ ...proOptions, autoNumberKeyword: keyword });
+    setProOptions({ ...proOptions, autoNumberKeyword: keyword, isCustomKeyword: false });
 
     // Re-number all existing images with the new keyword
     if (proOptions.autoNumberDescription) {
       const updatedImages = images.map((img, index) => ({
         ...img,
-        description: `${keyword} ${index + 1}`,
+        description: `${keyword} ${index + startNum}`,
+      }));
+      setImages(updatedImages);
+    }
+  };
+
+  const handleCustomKeywordChange = (value: string) => {
+    setProOptions({ ...proOptions, customKeyword: value, isCustomKeyword: true });
+
+    // Live-renumber all existing images with the new custom keyword
+    if (proOptions.autoNumberDescription) {
+      const updatedImages = images.map((img, index) => ({
+        ...img,
+        description: `${value || 'Photo'} ${index + startNum}`,
+      }));
+      setImages(updatedImages);
+    }
+  };
+
+  const handleCustomKeywordSelect = () => {
+    setProOptions({ ...proOptions, isCustomKeyword: true });
+
+    if (proOptions.autoNumberDescription) {
+      const kw = proOptions.customKeyword || 'Photo';
+      const updatedImages = images.map((img, index) => ({
+        ...img,
+        description: `${kw} ${index + startNum}`,
+      }));
+      setImages(updatedImages);
+    }
+  };
+
+  const handleNumberStartChange = (value: number, enabled: boolean) => {
+    const newStart = enabled ? (value || 1) : 1;
+    setProOptions({ ...proOptions, useCustomNumberStart: enabled, numberStartFrom: value });
+
+    // Re-number all existing images with the new start
+    if (proOptions.autoNumberDescription) {
+      const updatedImages = images.map((img, index) => ({
+        ...img,
+        description: `${effectiveKeyword} ${index + newStart}`,
       }));
       setImages(updatedImages);
     }
@@ -133,8 +199,9 @@ export default function ProMode() {
     if (!imageData || !imageData.processedBlob) return;
 
     try {
+      const { quality } = COMPRESSION_PRESETS[proOptions.compressionPreset];
       const currentRotation = imageData.rotationAngle || 0;
-      const rotated = await rotateImage(imageData.processedBlob, currentRotation);
+      const rotated = await rotateImage(imageData.processedBlob, currentRotation, quality);
 
       // Revoke old preview URL
       if (imageData.preview) {
@@ -244,6 +311,41 @@ export default function ProMode() {
 
         {showConfig && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 bg-gray-50 rounded-lg">
+
+            {/* ── Compression Preset ───────────────────────────────────── */}
+            <div className="md:col-span-2 lg:col-span-3">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                📦 Compression Quality
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {(Object.entries(COMPRESSION_PRESETS) as [CompressionPreset, typeof COMPRESSION_PRESETS[CompressionPreset]][]).map(
+                  ([key, cfg]) => (
+                    <label
+                      key={key}
+                      className={`flex flex-col gap-1 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${
+                        proOptions.compressionPreset === key
+                          ? 'border-blue-500 bg-blue-50 text-blue-800 shadow-sm'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50/40'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="compressionPreset"
+                        value={key}
+                        checked={proOptions.compressionPreset === key}
+                        onChange={() => setProOptions({ ...proOptions, compressionPreset: key })}
+                        className="sr-only"
+                      />
+                      <span className="font-semibold text-sm">{cfg.label}</span>
+                      <span className="text-xs opacity-75">{cfg.description}</span>
+                      <span className="text-xs font-mono opacity-60 mt-0.5">
+                        {cfg.maxDimension}px · q={cfg.quality}
+                      </span>
+                    </label>
+                  )
+                )}
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Add Border
@@ -301,7 +403,7 @@ export default function ProMode() {
                         </span>
                       </label>
                       <p className="text-xs text-gray-500 mt-1">
-                        Auto-generate "{proOptions.autoNumberKeyword} 1, 2, 3..."
+                        Auto-generate &quot;{effectiveKeyword} {startNum}, {startNum + 1}, {startNum + 2}...&quot;
                       </p>
                     </div>
 
@@ -311,11 +413,12 @@ export default function ProMode() {
                           Photo Number Keyword
                         </label>
                         <div className="flex flex-col gap-2">
+                          {/* ── Preset keywords (unchanged) ── */}
                           {AUTO_NUMBER_KEYWORDS.map((keyword) => (
                             <label
                               key={keyword}
                               className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all ${
-                                proOptions.autoNumberKeyword === keyword
+                                !proOptions.isCustomKeyword && proOptions.autoNumberKeyword === keyword
                                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                                   : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50/50'
                               }`}
@@ -324,13 +427,82 @@ export default function ProMode() {
                                 type="radio"
                                 name="autoNumberKeyword"
                                 value={keyword}
-                                checked={proOptions.autoNumberKeyword === keyword}
+                                checked={!proOptions.isCustomKeyword && proOptions.autoNumberKeyword === keyword}
                                 onChange={() => handleKeywordChange(keyword)}
                                 className="accent-blue-600"
                               />
                               <span className="text-xs font-medium">{keyword}</span>
                             </label>
                           ))}
+
+                          {/* ── Manual / custom keyword ── */}
+                          <label
+                            className={`flex flex-col gap-1.5 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                              proOptions.isCustomKeyword
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="autoNumberKeyword"
+                                value="custom"
+                                checked={proOptions.isCustomKeyword}
+                                onChange={handleCustomKeywordSelect}
+                                className="accent-blue-600"
+                              />
+                              <span className="text-xs font-medium">Custom keyword</span>
+                            </div>
+                            {proOptions.isCustomKeyword && (
+                              <input
+                                type="text"
+                                value={proOptions.customKeyword}
+                                onChange={(e) => handleCustomKeywordChange(e.target.value)}
+                                placeholder="e.g. Cargo Photo No."
+                                className="w-full mt-1 px-2 py-1.5 text-xs border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 bg-white"
+                                autoFocus
+                              />
+                            )}
+                          </label>
+                        </div>
+
+                        {/* ── Photo numbering start ── */}
+                        <div className="mt-4 pt-3 border-t border-gray-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-medium text-gray-700">
+                              Set Starting Number
+                            </label>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={proOptions.useCustomNumberStart}
+                                onChange={(e) => handleNumberStartChange(proOptions.numberStartFrom, e.target.checked)}
+                                className="sr-only peer"
+                              />
+                              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                              <span className="ms-2 text-xs font-medium text-gray-600">
+                                {proOptions.useCustomNumberStart ? 'On' : 'Off'}
+                              </span>
+                            </label>
+                          </div>
+                          {proOptions.useCustomNumberStart ? (
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-gray-500 shrink-0">Start from:</label>
+                              <input
+                                type="number"
+                                min={1}
+                                value={proOptions.numberStartFrom}
+                                onChange={(e) => handleNumberStartChange(Number(e.target.value), true)}
+                                className="w-24 px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-center font-semibold"
+                              />
+                              <span className="text-xs text-gray-400">
+                                → photos numbered {proOptions.numberStartFrom}, {proOptions.numberStartFrom + 1}, {proOptions.numberStartFrom + 2}...
+                              </span>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400">Default: starts from 1, 2, 3...</p>
+                          )}
                         </div>
                       </div>
                     )}
@@ -458,18 +630,61 @@ export default function ProMode() {
           </div>
         </div>
 
+        {/* ── Folder select button + hidden input ─────────────────────── */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-1 border-t border-gray-200" />
+          <span className="text-xs text-gray-400 shrink-0">or</span>
+          <div className="flex-1 border-t border-gray-200" />
+        </div>
+        <div className="flex justify-center mb-6">
+          <input
+            ref={folderInputRef}
+            type="file"
+            multiple
+            accept="image/jpeg,image/jpg,image/png,image/bmp"
+            {...({ webkitdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
+            className="hidden"
+            onChange={async (e) => {
+              const allFiles = Array.from(e.target.files || []);
+              const imageFiles = allFiles.filter(f => ALLOWED_IMAGE_TYPES.includes(f.type));
+              if (imageFiles.length === 0) {
+                alert('No supported images found in the selected folder.\nSupported formats: JPG, PNG, BMP');
+                e.target.value = '';
+                return;
+              }
+              await onDrop(imageFiles);
+              e.target.value = '';
+            }}
+          />
+          <button
+            onClick={() => folderInputRef.current?.click()}
+            disabled={isProcessing}
+            className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          >
+            <Folder className="w-5 h-5" />
+            Select Folder
+          </button>
+        </div>
+
         {images.length > 0 && (
           <>
             <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl p-6 mb-6 border border-primary/20">
               <div className="flex justify-between items-center flex-wrap gap-4">
                 <div>
-                  <h3 className="text-xl font-bold text-primary mb-1">
-                    {images.length} {images.length === 1 ? 'Image' : 'Images'} Uploaded
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {uploadedCount} processed • Configure options above
-                  </p>
-                </div>
+                <h3 className="text-xl font-bold text-primary mb-1">
+                  {images.length} {images.length === 1 ? 'Image' : 'Images'} Uploaded
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {uploadedCount} processed • Configure options above
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Estimated DOCX size:{' '}
+                  <span className="font-semibold text-gray-600">
+                    {estimatedDocxSize(uploadedCount, proOptions.compressionPreset)}
+                  </span>
+                  {' '}· {COMPRESSION_PRESETS[proOptions.compressionPreset].label} preset
+                </p>
+              </div>
 
                 <div className="flex items-center gap-3">
                   <button
