@@ -68,6 +68,7 @@ export interface ProModeOptions {
   fontColor: string;
   fontType: string;
   boxColor: string;
+  compressionEnabled: boolean;
   compressionPreset: CompressionPreset;
 }
 
@@ -130,6 +131,7 @@ export const DEFAULT_PRO_OPTIONS: ProModeOptions = {
   fontColor: '000000',
   fontType: 'Arial',
   boxColor: '000000',
+  compressionEnabled: false,
   compressionPreset: 'balanced',
 };
 

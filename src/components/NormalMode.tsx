@@ -257,10 +257,7 @@ export default function NormalMode() {
                   {uploadedCount} of {boxes} images uploaded
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Estimated DOCX size:{' '}
-                  <span className="font-semibold text-gray-600">
-                    {estimatedDocxSize(uploadedCount, 'balanced')}
-                  </span>
+                  <span className="text-gray-500">Original quality — no compression applied</span>
                 </p>
               </div>
 

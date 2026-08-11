@@ -51,7 +51,12 @@ export default function ProMode() {
 
     const newImagesPromises = acceptedFiles.map(async (file, index) => {
       try {
-        const processed = await processImage(file, maxDimension, quality);
+        const processed = await processImage(
+          file,
+          proOptions.compressionEnabled,
+          maxDimension,
+          quality
+        );
         
         // Auto-generate description if auto-numbering is enabled
         const autoDescription = proOptions.autoNumberDescription 
@@ -97,7 +102,12 @@ export default function ProMode() {
   const handleImageUpload = async (index: number, file: File) => {
     try {
       const { maxDimension, quality } = COMPRESSION_PRESETS[proOptions.compressionPreset];
-      const processed = await processImage(file, maxDimension, quality);
+      const processed = await processImage(
+        file,
+        proOptions.compressionEnabled,
+        maxDimension,
+        quality
+      );
       
       const newImages = [...images];
       newImages[index] = {
@@ -312,39 +322,58 @@ export default function ProMode() {
         {showConfig && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 bg-gray-50 rounded-lg">
 
-            {/* ── Compression Preset ───────────────────────────────────── */}
+            {/* ── Compression ──────────────────────────────────────────── */}
             <div className="md:col-span-2 lg:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                📦 Compression Quality
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {(Object.entries(COMPRESSION_PRESETS) as [CompressionPreset, typeof COMPRESSION_PRESETS[CompressionPreset]][]).map(
-                  ([key, cfg]) => (
-                    <label
-                      key={key}
-                      className={`flex flex-col gap-1 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${
-                        proOptions.compressionPreset === key
-                          ? 'border-blue-500 bg-blue-50 text-blue-800 shadow-sm'
-                          : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50/40'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="compressionPreset"
-                        value={key}
-                        checked={proOptions.compressionPreset === key}
-                        onChange={() => setProOptions({ ...proOptions, compressionPreset: key })}
-                        className="sr-only"
-                      />
-                      <span className="font-semibold text-sm">{cfg.label}</span>
-                      <span className="text-xs opacity-75">{cfg.description}</span>
-                      <span className="text-xs font-mono opacity-60 mt-0.5">
-                        {cfg.maxDimension}px · q={cfg.quality}
-                      </span>
-                    </label>
-                  )
-                )}
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-gray-700">
+                  📦 Compression
+                </label>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={proOptions.compressionEnabled}
+                    onChange={(e) => setProOptions({ ...proOptions, compressionEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <span className="ms-3 text-sm font-medium text-gray-700">
+                    {proOptions.compressionEnabled ? 'On' : 'Off'}
+                  </span>
+                </label>
               </div>
+
+              {proOptions.compressionEnabled ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {(Object.entries(COMPRESSION_PRESETS) as [CompressionPreset, typeof COMPRESSION_PRESETS[CompressionPreset]][]).map(
+                    ([key, cfg]) => (
+                      <label
+                        key={key}
+                        className={`flex flex-col gap-1 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${
+                          proOptions.compressionPreset === key
+                            ? 'border-blue-500 bg-blue-50 text-blue-800 shadow-sm'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50/40'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="compressionPreset"
+                          value={key}
+                          checked={proOptions.compressionPreset === key}
+                          onChange={() => setProOptions({ ...proOptions, compressionPreset: key })}
+                          className="sr-only"
+                        />
+                        <span className="font-semibold text-sm">{cfg.label}</span>
+                        <span className="text-xs opacity-75">{cfg.description}</span>
+                        <span className="text-xs font-mono opacity-60 mt-0.5">
+                          {cfg.maxDimension}px · q={cfg.quality}
+                        </span>
+                      </label>
+                    )
+                  )}
+                </div>
+              ) : (
+                <div className="h-2" />
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -678,11 +707,17 @@ export default function ProMode() {
                   {uploadedCount} processed • Configure options above
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Estimated DOCX size:{' '}
-                  <span className="font-semibold text-gray-600">
-                    {estimatedDocxSize(uploadedCount, proOptions.compressionPreset)}
-                  </span>
-                  {' '}· {COMPRESSION_PRESETS[proOptions.compressionPreset].label} preset
+                  {proOptions.compressionEnabled ? (
+                    <>
+                      Estimated DOCX size:{' '}
+                      <span className="font-semibold text-gray-600">
+                        {estimatedDocxSize(uploadedCount, proOptions.compressionPreset)}
+                      </span>
+                      {' '}· {COMPRESSION_PRESETS[proOptions.compressionPreset].label} preset
+                    </>
+                  ) : (
+                    <span className="text-gray-500">Original quality — no compression applied</span>
+                  )}
                 </p>
               </div>
 

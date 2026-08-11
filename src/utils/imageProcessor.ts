@@ -10,17 +10,78 @@ export interface ProcessedImageResult {
 }
 
 /**
- * Decode, EXIF-correct, optionally rotate portrait→landscape, then compress.
+ * Decode, EXIF-correct, optionally rotate portrait→landscape, and optionally compress.
  *
- * @param file           The raw File from the user
- * @param maxDimension   Max px for both width & height (default 1100 — "balanced")
- * @param quality        JPEG quality 0–1 (default 0.72 — "balanced")
+ * @param file         The raw File from the user
+ * @param compress     Whether to apply compression (default false = original bytes)
+ * @param maxDimension Max px for both axes — only used when compress=true (default 1100)
+ * @param quality      JPEG quality 0–1 — only used when compress=true (default 0.72)
  */
 export async function processImage(
   file: File,
+  compress: boolean = false,
   maxDimension: number = 1100,
   quality: number = 0.72
 ): Promise<ProcessedImageResult> {
+  // ── No-compression fast path ──────────────────────────────────────────────
+  // Load via blueimp purely to resolve EXIF orientation and detect portrait/landscape.
+  if (!compress) {
+    return new Promise((resolve, reject) => {
+      loadImage(
+        file,
+        (img) => {
+          if (img instanceof Event) {
+            reject(new Error('Failed to load image'));
+            return;
+          }
+          const canvas = img as HTMLCanvasElement;
+          const width = canvas.width;
+          const height = canvas.height;
+          const originalOrientation = width < height ? 'portrait' : 'landscape';
+
+          if (height > width) {
+            // Portrait → must rotate (requires canvas re-encode). Use high quality.
+            const rotatedCanvas = document.createElement('canvas');
+            rotatedCanvas.width = height;
+            rotatedCanvas.height = width;
+            const rotatedCtx = rotatedCanvas.getContext('2d');
+            if (!rotatedCtx) { reject(new Error('Failed to create rotation canvas')); return; }
+
+            rotatedCtx.translate(height / 2, width / 2);
+            rotatedCtx.rotate((-90 * Math.PI) / 180);
+            rotatedCtx.drawImage(canvas, -width / 2, -height / 2);
+
+            rotatedCanvas.toBlob((blob) => {
+              if (!blob) { reject(new Error('Failed to create rotated blob')); return; }
+              console.log(`✓ Rotated (no-compress): ${blob.size} bytes`);
+              resolve({
+                blob,
+                preview: URL.createObjectURL(blob),
+                width: rotatedCanvas.width,
+                height: rotatedCanvas.height,
+                wasRotated: true,
+                originalOrientation,
+              });
+            }, 'image/jpeg', 0.92);
+          } else {
+            // Landscape → use original file bytes, zero re-encoding
+            console.log(`✓ Original (no-compress): ${file.size} bytes`);
+            resolve({
+              blob: file,
+              preview: URL.createObjectURL(file),
+              width,
+              height,
+              wasRotated: false,
+              originalOrientation,
+            });
+          }
+        },
+        { maxWidth: 32767, maxHeight: 32767, canvas: true, orientation: true }
+      );
+    });
+  }
+
+  // ── Compression path ─────────────────────────────────────────────────────
   return new Promise((resolve, reject) => {
     loadImage(
       file,
