@@ -1,18 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { ImageData, ALLOWED_IMAGE_TYPES, MAX_IMAGE_COUNT, estimatedDocxSize } from '@/types';
 import { processImage, rotateImage } from '@/utils/imageProcessor';
 import { generateNormalModeDocx, generateFileName } from '@/utils/docxGenerator';
-import { Upload, X, Download, Image as ImageIcon, GripVertical, RotateCcw, RotateCw, Folder } from 'lucide-react';
+import { Upload, X, Download, Image as ImageIcon, GripVertical, RotateCcw, RotateCw } from 'lucide-react';
 
 export default function BulkMode() {
   const [images, setImages] = useState<ImageData[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const onDrop = async (acceptedFiles: File[]) => {
     if (images.length + acceptedFiles.length > MAX_IMAGE_COUNT) {
@@ -62,25 +61,6 @@ export default function BulkMode() {
     multiple: true,
   });
 
-  const handleFolderSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const allFiles = Array.from(e.target.files || []);
-    const imageFiles = allFiles.filter(f => ALLOWED_IMAGE_TYPES.includes(f.type));
-    const skipped = allFiles.length - imageFiles.length;
-
-    if (imageFiles.length === 0) {
-      alert('No supported images found in the selected folder.\nSupported formats: JPG, PNG, BMP');
-      e.target.value = '';
-      return;
-    }
-
-    if (skipped > 0) {
-      console.log(`Folder select: skipped ${skipped} non-image file(s)`);
-    }
-
-    await onDrop(imageFiles);
-    // Reset so the same folder can be re-selected if needed
-    e.target.value = '';
-  };
 
   const handleRemoveImage = (index: number) => {
     const newImages = [...images];
@@ -241,34 +221,6 @@ export default function BulkMode() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* ── Folder select button + hidden input ───────────────────── */}
-      <div className="flex items-center justify-center gap-3">
-        <div className="flex-1 border-t border-gray-200" />
-        <span className="text-xs text-gray-400 shrink-0">or</span>
-        <div className="flex-1 border-t border-gray-200" />
-      </div>
-
-      <div className="flex justify-center">
-        {/* Hidden folder input — webkitdirectory picks an entire folder */}
-        <input
-          ref={folderInputRef}
-          type="file"
-          multiple
-          accept="image/jpeg,image/jpg,image/png,image/bmp"
-          {...({ webkitdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
-          className="hidden"
-          onChange={handleFolderSelect}
-        />
-        <button
-          onClick={() => folderInputRef.current?.click()}
-          disabled={isProcessing}
-          className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-        >
-          <Folder className="w-5 h-5" />
-          Select Folder
-        </button>
       </div>
 
       {images.length > 0 && (

@@ -32,24 +32,24 @@ export interface CompressionConfig {
 export const COMPRESSION_PRESETS: Record<CompressionPreset, CompressionConfig> = {
   high: {
     label: 'High Quality',
-    description: 'Best visuals, larger file (~250 KB/photo)',
-    maxDimension: 1400,
-    quality: 0.82,
-    approxKBPerImage: 250,
+    description: 'Near-original visuals (~2 MB/photo)',
+    maxDimension: 3000,
+    quality: 0.88,
+    approxKBPerImage: 2000,
   },
   balanced: {
     label: 'Balanced',
-    description: 'Great quality, reasonable size (~120 KB/photo)',
-    maxDimension: 1100,
-    quality: 0.72,
-    approxKBPerImage: 120,
+    description: 'Good quality, manageable size (~1 MB/photo)',
+    maxDimension: 2200,
+    quality: 0.78,
+    approxKBPerImage: 1000,
   },
   small: {
     label: 'Small File',
-    description: 'Smallest output, suitable for email (~65 KB/photo)',
-    maxDimension: 750,
-    quality: 0.60,
-    approxKBPerImage: 65,
+    description: 'Compact output, good for sharing (~500 KB/photo)',
+    maxDimension: 1600,
+    quality: 0.65,
+    approxKBPerImage: 500,
   },
 };
 

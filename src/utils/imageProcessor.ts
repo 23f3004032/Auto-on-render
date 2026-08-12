@@ -23,8 +23,9 @@ export async function processImage(
   maxDimension: number = 1100,
   quality: number = 0.72
 ): Promise<ProcessedImageResult> {
-  // ── No-compression fast path ──────────────────────────────────────────────
-  // Load via blueimp purely to resolve EXIF orientation and detect portrait/landscape.
+  // ── No-compression path ───────────────────────────────────────────────────
+  // Load via blueimp to resolve EXIF orientation, then write from the corrected
+  // canvas at maximum quality so the DOCX always gets a correctly-oriented image.
   if (!compress) {
     return new Promise((resolve, reject) => {
       loadImage(
@@ -39,8 +40,12 @@ export async function processImage(
           const height = canvas.height;
           const originalOrientation = width < height ? 'portrait' : 'landscape';
 
+          // Determine output MIME type — preserve PNG losslessly, JPEG at q=1.0
+          const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          const outQuality = file.type === 'image/png' ? undefined : 1.0;
+
           if (height > width) {
-            // Portrait → must rotate (requires canvas re-encode). Use high quality.
+            // Portrait → rotate to landscape (requires canvas)
             const rotatedCanvas = document.createElement('canvas');
             rotatedCanvas.width = height;
             rotatedCanvas.height = width;
@@ -62,18 +67,22 @@ export async function processImage(
                 wasRotated: true,
                 originalOrientation,
               });
-            }, 'image/jpeg', 0.92);
+            }, mimeType, outQuality);
           } else {
-            // Landscape → use original file bytes, zero re-encoding
-            console.log(`✓ Original (no-compress): ${file.size} bytes`);
-            resolve({
-              blob: file,
-              preview: URL.createObjectURL(file),
-              width,
-              height,
-              wasRotated: false,
-              originalOrientation,
-            });
+            // Landscape → write from EXIF-corrected canvas at max quality
+            // (fixes EXIF orientation in DOCX without any quality loss)
+            canvas.toBlob((blob) => {
+              if (!blob) { reject(new Error('Failed to create blob')); return; }
+              console.log(`✓ Landscape (no-compress, EXIF-corrected): ${blob.size} bytes`);
+              resolve({
+                blob,
+                preview: URL.createObjectURL(blob),
+                width: canvas.width,
+                height: canvas.height,
+                wasRotated: false,
+                originalOrientation,
+              });
+            }, mimeType, outQuality);
           }
         },
         { maxWidth: 32767, maxHeight: 32767, canvas: true, orientation: true }
@@ -170,6 +179,7 @@ export async function processImage(
         }
       },
       {
+        // Dimension cap + quality = compression. Both are needed to hit target sizes.
         maxWidth: maxDimension,
         maxHeight: maxDimension,
         canvas: true,

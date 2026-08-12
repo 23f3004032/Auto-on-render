@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   ImageData,
@@ -20,14 +20,13 @@ import {
 import ImageUploadBox from './ImageUploadBox';
 import { processImage, rotateImage } from '@/utils/imageProcessor';
 import { generateProModeDocx, generateFileName } from '@/utils/docxGenerator';
-import { Download, Settings, Upload, Folder } from 'lucide-react';
+import { Download, Settings, Upload } from 'lucide-react';
 
 export default function ProMode() {
   const [images, setImages] = useState<ImageData[]>([]);
   const [proOptions, setProOptions] = useState<ProModeOptions>(DEFAULT_PRO_OPTIONS);
   const [showConfig, setShowConfig] = useState<boolean>(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const folderInputRef = useRef<HTMLInputElement>(null);
 
   // ── Derived helpers ──────────────────────────────────────────────────────
   // The keyword actually used in descriptions (preset or custom)
@@ -657,42 +656,6 @@ export default function ProMode() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* ── Folder select button + hidden input ─────────────────────── */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex-1 border-t border-gray-200" />
-          <span className="text-xs text-gray-400 shrink-0">or</span>
-          <div className="flex-1 border-t border-gray-200" />
-        </div>
-        <div className="flex justify-center mb-6">
-          <input
-            ref={folderInputRef}
-            type="file"
-            multiple
-            accept="image/jpeg,image/jpg,image/png,image/bmp"
-            {...({ webkitdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
-            className="hidden"
-            onChange={async (e) => {
-              const allFiles = Array.from(e.target.files || []);
-              const imageFiles = allFiles.filter(f => ALLOWED_IMAGE_TYPES.includes(f.type));
-              if (imageFiles.length === 0) {
-                alert('No supported images found in the selected folder.\nSupported formats: JPG, PNG, BMP');
-                e.target.value = '';
-                return;
-              }
-              await onDrop(imageFiles);
-              e.target.value = '';
-            }}
-          />
-          <button
-            onClick={() => folderInputRef.current?.click()}
-            disabled={isProcessing}
-            className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-          >
-            <Folder className="w-5 h-5" />
-            Select Folder
-          </button>
         </div>
 
         {images.length > 0 && (
